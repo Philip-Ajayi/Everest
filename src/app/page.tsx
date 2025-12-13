@@ -449,8 +449,8 @@ const EverestStudio = () => {
              <h4 className="text-white font-bold mb-6">Contact</h4>
              <ul className="space-y-3 text-sm">
                <li>hello@evereststudio.com</li>
-               <li>+1 (555) 123-4567</li>
-               <li>12 Creative Ave, Design District</li>
+               <li>+234 905 228 8824</li>
+               <li>Water, Ibadan</li>
              </ul>
              <div className="flex gap-4 mt-6">
                <a href="#" className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"><Instagram size={16} /></a>
