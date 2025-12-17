@@ -447,7 +447,7 @@ export default function EverestStudio() {
                 Matriculation & <br />Convocation
               </h2>
               <p className="text-slate-600 mb-8 text-lg">
-                Access your specialized student gallery. Find your matriculation photos, graduation ceremonies, and campus memories in a dedicated private vault.
+                Commemorative Photoshoots Capture your greatest academic milestones. Book a professional session for your Matriculation, Convocation, or Induction. We provide high-quality, personalized photography to preserve your campus memories forever.
               </p>
               <a 
                 href="#" 
