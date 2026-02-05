@@ -13,7 +13,7 @@ const REFERENCE_VIDEOS = [
   "https://www.youtube.com/watch?v=niRB1LcCBlk"
 ];
 
-const API_KEY = ""; // Execution environment provides the key
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY; // Execution environment provides the key
 
 export default function App() {
   const [jobUrl, setJobUrl] = useState('');
