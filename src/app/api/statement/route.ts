@@ -1,73 +1,50 @@
-"use client";
+import { NextRequest, NextResponse } from "next/server";
+import { GoogleGenAI } from "@google/genai";
+import * as fs from "fs";
 
-import { useState } from "react";
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+});
 
-export default function PersonalStatementPage() {
-  const [jobUrl, setJobUrl] = useState("");
-  const [cvFile, setCvFile] = useState<File | null>(null);
-  const [result, setResult] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+export async function POST(req: NextRequest) {
+  try {
+    const formData = await req.formData();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!cvFile || !jobUrl) return;
+    const jobUrl = formData.get("jobUrl")?.toString();
+    const cvFile = formData.get("cv") as File;
 
-    setLoading(true);
-    const formData = new FormData();
-    formData.append("jobUrl", jobUrl);
-    formData.append("cv", cvFile);
+    if (!jobUrl || !cvFile) {
+      return NextResponse.json({ error: "Job URL and CV file are required" }, { status: 400 });
+    }
 
-    const res = await fetch("/api/statement", {
-      method: "POST",
-      body: formData,
+    // Convert uploaded CV to base64
+    const cvBuffer = Buffer.from(await cvFile.arrayBuffer());
+    const cvBase64 = cvBuffer.toString("base64");
+
+    const youtubeUrls = [
+      "https://www.youtube.com/watch?v=Brx7McZdMaQ",
+      "https://www.youtube.com/watch?v=niRB1LcCBlk",
+    ];
+
+    const contents: any[] = [
+      { fileData: { fileUri: jobUrl } },
+      { inlineData: { mimeType: "application/pdf", data: cvBase64 } },
+      ...youtubeUrls.map((url) => ({ fileData: { fileUri: url } })),
+      { text: "Generate a personal statement in HTML format based on the job description, CV, and YouTube guides." }
+    ];
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: contents,
+      config: {
+        responseMimeType: "application/json",
+      },
     });
 
-    const data = await res.json();
-    setResult(data.statement || "No statement generated.");
-    setLoading(false);
-  };
-
-  return (
-    <div className="max-w-xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">Generate Personal Statement</h1>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <label>
-          Job Description URL:
-          <input
-            type="url"
-            value={jobUrl}
-            onChange={(e) => setJobUrl(e.target.value)}
-            className="border p-2 w-full"
-            required
-          />
-        </label>
-
-        <label>
-          Upload CV (PDF):
-          <input
-            type="file"
-            accept="application/pdf"
-            onChange={(e) => e.target.files && setCvFile(e.target.files[0])}
-            className="border p-2 w-full"
-            required
-          />
-        </label>
-
-        <button
-          type="submit"
-          className="bg-blue-600 text-white py-2 px-4 rounded"
-          disabled={loading}
-        >
-          {loading ? "Generating..." : "Generate Statement"}
-        </button>
-      </form>
-
-      {result && (
-        <div className="mt-6 p-4 border rounded bg-gray-50">
-          <h2 className="font-semibold mb-2">Personal Statement:</h2>
-          <div dangerouslySetInnerHTML={{ __html: result }} />
-        </div>
-      )}
-    </div>
-  );
+    // Return structured JSON
+    return NextResponse.json({ statement: response.text });
+  } catch (error: any) {
+    console.error(error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 }
