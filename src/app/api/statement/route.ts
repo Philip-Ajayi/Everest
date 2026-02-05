@@ -1,35 +1,64 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
+import * as fs from "fs";
 
-// Optional but recommended: force Node runtime (not Edge)
-export const runtime = "nodejs";
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-const ai = new GoogleGenAI({
-  // If you use an API key, pass it here or rely on env vars
-  // apiKey: process.env.GOOGLE_API_KEY,
-});
-
-export async function GET() {
+export async function POST(req: NextRequest) {
   try {
+    const formData = await req.formData();
+
+    // Get job description URL from the form
+    const jobDescriptionUrl = formData.get("jobDescriptionUrl")?.toString();
+    if (!jobDescriptionUrl) {
+      return NextResponse.json({ error: "Job description URL is required." }, { status: 400 });
+    }
+
+    // Get YouTube URL (optional)
+    const youtubeUrl = formData.get("youtubeUrl")?.toString() || "https://www.youtube.com/watch?v=Brx7McZdMaQ";
+
+    // Get uploaded CV
+    const cvFile = formData.get("cv") as File;
+    if (!cvFile) {
+      return NextResponse.json({ error: "CV file is required." }, { status: 400 });
+    }
+    const cvBuffer = Buffer.from(await cvFile.arrayBuffer()).toString("base64");
+
+    // Build Gemini content array
+    const contents = [
+      {
+        text: `Create a personal statement based on:
+        1. Job description at ${jobDescriptionUrl}
+        2. Video guidance at ${youtubeUrl}
+        3. User's CV document`
+      },
+      {
+        inlineData: {
+          mimeType: "application/pdf",
+          data: cvBuffer
+        }
+      },
+      {
+        fileData: {
+          fileUri: youtubeUrl
+        }
+      }
+    ];
+
+    // Call Gemini
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: [
-        "Compare the ingredients and cooking times from the recipes at https://www.foodnetwork.com/recipes/ina-garten/perfect-roast-chicken-recipe-1940592 and https://www.allrecipes.com/recipe/21151/simple-whole-roast-chicken/",
-      ],
+      contents: contents,
       config: {
         tools: [{ urlContext: {} }],
-      },
+        responseMimeType: "text/html" // structured HTML output
+      }
     });
 
-    return NextResponse.json({
-      text: response.text,
-      urlContextMetadata: response.candidates?.[0]?.urlContextMetadata,
-    });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { error: "Failed to generate content" },
-      { status: 500 }
-    );
+    // Return the personal statement HTML
+    return NextResponse.json({ statement: response.text });
+  } catch (err: any) {
+    console.error(err);
+    return NextResponse.json({ error: err.message || "Internal server error" }, { status: 500 });
   }
 }
